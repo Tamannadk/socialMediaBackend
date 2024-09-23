@@ -23,7 +23,7 @@ const postSchema=new mongoose.Schema(
         },
         shares:{
             type:Number,
-            required:true
+            default:0
         }
     },
     {

@@ -14,13 +14,15 @@ const createPost=asyncHandler(async(req,res)=>{
     {
         throw new ApiError(400,"Description is required!!")
     }
-    const postImage=req.files?.postFile[0].path;
+    const postImage=req.file.path;
+    // console.log("postImage",postImage)
     const updatedPostImage=await uploadOnCloudinary(postImage);
+    // console.log("updatedPostImage",updatedPostImage)
     const post=await Post.create(
         {
             description,
             author:req.user._id,
-            postImage:updatedPostImage||""
+            postImage:updatedPostImage?.secure_url||""
         }
     )
     if(!post)
