@@ -8,7 +8,7 @@ const router=Router();
 
 router.route("/create-post").post(
     verifyJWT,
-    upload.single("postImage")
+    upload.array("postImage",10)
     ,createPost
 )
 

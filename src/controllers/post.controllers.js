@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.models.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {uploadOnCloudinary,uploadMultipleFiles} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
@@ -14,15 +14,24 @@ const createPost=asyncHandler(async(req,res)=>{
     {
         throw new ApiError(400,"Description is required!!")
     }
-    const postImage=req.file.path;
-    // console.log("postImage",postImage)
-    const updatedPostImage=await uploadOnCloudinary(postImage);
-    // console.log("updatedPostImage",updatedPostImage)
+    const postImage=req.files;
+    console.log("postImage",postImage)
+    // const updatedPostImage=await uploadOnCloudinary(postImage);
+    let updatedPostImagePaths=[];
+    for(let i=0;i<postImage.length;i++)
+    {
+        let paths=postImage[0].path;
+        updatedPostImagePaths.push(paths)
+    }
+    console.log("updatedPostImagePaths",updatedPostImagePaths)
+    const uploadedPosts=await uploadMultipleFiles(updatedPostImagePaths)
     const post=await Post.create(
         {
             description,
             author:req.user._id,
-            postImage:updatedPostImage?.secure_url||""
+            postImage:uploadedPosts.map(file=>{
+                return file.secure_url
+            })
         }
     )
     if(!post)

@@ -7,7 +7,7 @@ const postSchema=new mongoose.Schema(
             ref:"User"
         },
         postImage:{
-            type:String,
+            type:[String],
         },
         description:{
             type:String,
