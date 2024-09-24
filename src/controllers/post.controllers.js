@@ -89,7 +89,7 @@ const updatePost=asyncHandler(async(req,res)=>{
             new:true
         }
     )
-    res.status(200).json(new ApiResponse(200,updatedpost,"Fetched"))
+    return res.status(200).json(new ApiResponse(200,updatedpost,"Fetched"))
 })
 
 const deletePost=asyncHandler(async(req,res)=>{
@@ -121,12 +121,171 @@ const deletePost=asyncHandler(async(req,res)=>{
         {
             throw new ApiError(400,"Error while deleting posts")
         } 
-    res.status(200).json(new ApiResponse(200,deletedPost,"Post deleted successfully!!"))
+    return res.status(200).json(new ApiResponse(200,deletedPost,"Post deleted successfully!!"))
 })
 
 const getPostsByUser=asyncHandler(async(req,res)=>{
-    
+    const {userId}=req.params;
+
+    const posts=await Post.aggregate(
+        [
+            {
+                $match:{
+                    author:new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup:{
+                    from:"users",
+                    localField:"author",
+                    foreignField:"_id",
+                    as:"author",
+                    pipeline:[
+                        {
+                            $lookup:{
+                                from:"follows",
+                                localField:"_id",
+                                foreignField:"follower",
+                                as:"followers"
+                            }
+                        },
+                        {
+                            $lookup:{
+                                from:"follows",
+                                localField:"_id",
+                                foreignField:"following",
+                                as:"following"
+                            }
+                        },
+                        {
+                            $addFields:{
+                                followersCount:{
+                                    $size:"$followers"
+                                },
+                                followingCount:{
+                                    $size:"$following"
+                                },
+                                isFollowing:{
+                                    $cond: {
+                                        if: { $in: [new mongoose.Types.ObjectId(userId), "$followers.follower"] },
+                                        then: true,
+                                        else: false,
+                                      },
+                                },
+                            }
+                        },
+                        {
+                            $project:{
+                                fullName:1,
+                                username:1,
+                                avatar:1,
+                                followersCount:1,
+                                followingCount:1,
+                                isFollowing:1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields:{
+                    author: {
+                        $first: "$author",
+                    },
+                }
+            }
+        ]
+    )
+
+    return res.status(200).json(new ApiResponse(200,posts,"all posts fetched successfully!!"))
 })
 
+const getAllPosts=asyncHandler(async(req,res)=>{
+    const userId=req.user._id;
+    const posts=await Post.aggregate(
+        [
+            {
+                $match:{
+                    author:new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup:{
+                    from:"users",
+                    localField:"author",
+                    foreignField:"_id",
+                    as:"author",
+                    pipeline:[
+                        {
+                            $project:{
+                                fullName:1,
+                                username:1,
+                                avatar:1,
+                                createdAt:1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields:{
+                    author:{
+                        $first:"$author"
+                    }
+                }
+            }
+        ]
+    )
+    return res.status(200).json(new ApiResponse(200,posts,"All posts fetched successfully!!"))
+})
 
-export {createPost,updatePost,deletePost}
+const getPostById=asyncHandler(async(req,res)=>{
+    const {postId}=req.params;
+    if(!postId)
+    {
+        throw new ApiError(400,"post id is missing!!")
+    }
+    // Validate if the postId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+        throw new ApiError(400, "Invalid Post ID format!!");
+    }
+    const post=await Post.aggregate([
+        {
+            $match:{
+                _id:new mongoose.Types.ObjectId(postId)
+            }
+        },
+        {
+            $lookup:{
+                from:"users",
+                localField:"author",
+                foreignField:"_id",
+                as:"author",
+                pipeline:[
+                    {
+                        $project:{
+                            username:1,
+                            fullName:1,
+                            avatar:1,
+                            createdAt:1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields:{
+                author:{
+                    $first:"$author"
+                }
+            }
+        }
+    ])
+    if(!post)
+    {
+        throw new ApiError(400,"Post doesn't exist!!")
+    }
+    return res.status(200).json(new ApiResponse(200,post,"Post fetched successfully!"))
+})
+
+export {createPost,updatePost,deletePost,getPostsByUser,getAllPosts,getPostById}
