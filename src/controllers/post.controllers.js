@@ -1,11 +1,13 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.models.js"
-import {uploadOnCloudinary,uploadMultipleFiles} from "../utils/cloudinary.js"
+import {uploadOnCloudinary,uploadMultipleFiles, deleteFile} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
 import { Post } from "../models/post.models.js";
+import { Like } from "../models/like.models.js";
+import { Comment } from "../models/comment.models.js";
 
 
 const createPost=asyncHandler(async(req,res)=>{
@@ -38,13 +40,93 @@ const createPost=asyncHandler(async(req,res)=>{
     {
         throw new ApiError(404,"Error while creating post!!");
     }
-    return res.status(200).json(new ApiError(200,post,"Post created successfully!"))
+    return res.status(200).json(new ApiResponse(200,post,"Post created successfully!"))
 })
 
 const updatePost=asyncHandler(async(req,res)=>{
     const {postId}=req.params;
+    const {description}=req.body;
+    const imagePathsToRemove=req.files['imagePathsToRemove']
+    // console.log("imagePathsToRemove",imagePathsToRemove)
+    const newImages=req.files['newImages'];
+    const userId=req.user._id;
+    const post=await Post.findById(postId)
+    // console.log("Post details",post)
+    if(!post)
+    {
+        throw new ApiError(400,"Post not found!!")
+    }
+    if(post.author.toString()!=userId.toString())
+    {
+        throw new ApiError(404,"Unauthorized to edit this post!")
+    }
+    // Handle image removal
+    if(imagePathsToRemove && imagePathsToRemove.length>0)
+    {
+        await Promise.all(
+            imagePathsToRemove.map(async(imagePath)=>await deleteFile(imagePath))
+        )
+        post.postImage=post.postImage.filter((path)=>!imagePathsToRemove.includes(path))
+    }
+    //handle addition of new images
+    let updatedPostImagesPath=[]
+    if(newImages && newImages.length>0)
+    {
+        updatedPostImagesPath=newImages.map((image)=>image.path)
+    }
+    const uploadedPosts=await uploadMultipleFiles(updatedPostImagesPath);
+    // console.log("uploadedPosts",uploadedPosts)
+    const updatedpost=await Post.findByIdAndUpdate(
+        postId,
+        {
+            $set:{
+                description:description,
+                postImage:[...post.postImage,...uploadedPosts.map(file=>file?.secure_url)],
+                author:req.user._id
+            }
+        },
+        {
+            new:true
+        }
+    )
+    res.status(200).json(new ApiResponse(200,updatedpost,"Fetched"))
+})
 
+const deletePost=asyncHandler(async(req,res)=>{
+    const {postId}=req.params;
+    if(!postId)
+    {
+        throw new ApiError(400,"Post Id is missing!!")
+    }
+    //find the post
+    const post=await Post.findById(postId)
+    if(!post)
+    {
+        throw new ApiError(400,"Invalid posts!!")
+    }
+    //delete files from cloudinary
+    const images=post.postImage;
+    const deletedImages=await deleteFile(images)
+    if(!deletedImages)
+    {
+        throw new ApiError(400,"Error while deleting post images from cloudinary!")
+    }
+    //delete likes and comments
+    await Like.deleteMany({post:postId})
+    await Comment.deleteMany({post:postId})
+
+    //delete postInfo from database
+    const deletedPost=await Post.findByIdAndDelete(postId);
+    if(!deletedPost)
+        {
+            throw new ApiError(400,"Error while deleting posts")
+        } 
+    res.status(200).json(new ApiResponse(200,deletedPost,"Post deleted successfully!!"))
+})
+
+const getPostsByUser=asyncHandler(async(req,res)=>{
     
 })
 
-export {createPost}
+
+export {createPost,updatePost,deletePost}

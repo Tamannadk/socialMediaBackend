@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { createPost } from "../controllers/post.controllers.js";
+import { createPost, deletePost, updatePost } from "../controllers/post.controllers.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -11,5 +11,11 @@ router.route("/create-post").post(
     upload.array("postImage",10)
     ,createPost
 )
+router.route("/update-post/:postId").post(verifyJWT,upload.fields([
+    { name: 'newImages'},       // Allow up to 10 new images
+    { name: 'imagePathsToRemove'} // Allow up to 10 image paths to remove
+]),updatePost)
+
+router.route("/delete-post/:postId").delete(verifyJWT,deletePost)
 
 export default router
