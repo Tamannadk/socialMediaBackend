@@ -145,7 +145,7 @@ const getPostsByUser=asyncHandler(async(req,res)=>{
                             $lookup:{
                                 from:"follows",
                                 localField:"_id",
-                                foreignField:"follower",
+                                foreignField:"following",
                                 as:"followers"
                             }
                         },
@@ -153,7 +153,7 @@ const getPostsByUser=asyncHandler(async(req,res)=>{
                             $lookup:{
                                 from:"follows",
                                 localField:"_id",
-                                foreignField:"following",
+                                foreignField:"follower",
                                 as:"following"
                             }
                         },
