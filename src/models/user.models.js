@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    bio: {
+    Tagline: {
       type: String,
     },
     posts: {

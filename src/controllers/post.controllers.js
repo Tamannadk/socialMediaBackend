@@ -22,10 +22,10 @@ const createPost=asyncHandler(async(req,res)=>{
     let updatedPostImagePaths=[];
     for(let i=0;i<postImage.length;i++)
     {
-        let paths=postImage[0].path;
+        let paths=postImage[i].path;
         updatedPostImagePaths.push(paths)
     }
-    console.log("updatedPostImagePaths",updatedPostImagePaths)
+    console.log("updatedPostImagePaths::::",updatedPostImagePaths)
     const uploadedPosts=await uploadMultipleFiles(updatedPostImagePaths)
     const post=await Post.create(
         {
@@ -46,9 +46,10 @@ const createPost=asyncHandler(async(req,res)=>{
 const updatePost=asyncHandler(async(req,res)=>{
     const {postId}=req.params;
     const {description}=req.body;
-    const imagePathsToRemove=req.files['imagePathsToRemove']
+    const imagePathsToRemove=req.files['imagePathsToRemove'] || []
     // console.log("imagePathsToRemove",imagePathsToRemove)
-    const newImages=req.files['newImages'];
+    const newImages=req.files['newImages'] || []
+    console.log(description,newImages[0])
     const userId=req.user._id;
     const post=await Post.findById(postId)
     // console.log("Post details",post)
@@ -64,7 +65,7 @@ const updatePost=asyncHandler(async(req,res)=>{
     if(imagePathsToRemove && imagePathsToRemove.length>0)
     {
         await Promise.all(
-            imagePathsToRemove.map(async(imagePath)=>await deleteFile(imagePath))
+            imagePathsToRemove?.map(async(imagePath)=>await deleteFile(imagePath))
         )
         post.postImage=post.postImage.filter((path)=>!imagePathsToRemove.includes(path))
     }
