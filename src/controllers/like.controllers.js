@@ -173,7 +173,7 @@ const getUserLikedPosts=asyncHandler(async(req,res)=>{
             }
         ]
     )
-    console.log(posts)
+    // console.log(posts)
     if(posts.length==0)
     {
         res.status(200).json(new ApiResponse(200,posts,"You haven't liked any post yet!"))

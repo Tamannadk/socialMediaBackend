@@ -17,7 +17,7 @@ const createPost=asyncHandler(async(req,res)=>{
         throw new ApiError(400,"Description is required!!")
     }
     const postImage=req.files;
-    console.log("postImage",postImage)
+    // console.log("postImage",postImage)
     // const updatedPostImage=await uploadOnCloudinary(postImage);
     let updatedPostImagePaths=[];
     for(let i=0;i<postImage.length;i++)
@@ -25,7 +25,7 @@ const createPost=asyncHandler(async(req,res)=>{
         let paths=postImage[i].path;
         updatedPostImagePaths.push(paths)
     }
-    console.log("updatedPostImagePaths::::",updatedPostImagePaths)
+    // console.log("updatedPostImagePaths::::",updatedPostImagePaths)
     const uploadedPosts=await uploadMultipleFiles(updatedPostImagePaths)
     const post=await Post.create(
         {
@@ -288,5 +288,6 @@ const getPostById=asyncHandler(async(req,res)=>{
     }
     return res.status(200).json(new ApiResponse(200,post,"Post fetched successfully!"))
 })
+
 
 export {createPost,updatePost,deletePost,getPostsByUser,getAllPosts,getPostById}
